@@ -1,0 +1,224 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../paper-styles/typography.html">
+<link rel="import" href="../google-chart/google-chart.html">
+
+<dom-module id="flex-metric">
+  <template>
+    <style include="iron-flex iron-flex-alignment">
+      .container {
+        padding: 10px 15px 10px 15px;
+        border-color: var(--secondary-text-color);
+      }
+      .label { 
+        color: var(--secondary-text-color);
+        @apply --paper-font-caption;
+      }
+      .value {
+        padding: 2px 6px 0px 6px;
+        @apply --paper-font-headline;
+        font-weight: bold;
+        line-height: 24px;
+      }
+      .change {
+        padding: 2px 6px 0px 6px;
+        color: var(--secondary-text-color);
+        @apply --paper-font-headline;
+        line-height: 24px;
+      } 
+      .altValue {
+        padding: 2px 6px 0px 6px;
+        @apply --paper-font-headline;
+        font-weight: bold;
+        font-size: 16px;
+        line-height: 18px;
+      }
+      .altChange {
+        padding: 2px 6px 0px 6px;
+        color: var(--secondary-text-color);
+        @apply --paper-font-headline;
+        font-size: 16px;
+        line-height: 18px;
+      } 
+      .subLabels {
+        padding: 0px 6px 0px 6px;
+        color: var(--secondary-text-color);
+        @apply --paper-font-headline;
+        font-size: 8px;
+        line-height: 8px;
+      }
+      .highlight {
+        color: #0d47a1
+      }
+      .subsection {
+        padding: 8px 0px 8px 0px;
+      }
+      google-chart {
+        padding: 8px 0px 8px 0px;
+        height:25px;
+        width:100%;
+      }
+    </style>
+
+    <div class="container layout vertical center">
+      <template is="dom-if" if="{{_checkExistance(label)}}">
+        <div class="label">{{label}}</div>
+      </template>
+      <div id="valueSection" class="layout horizontal center">
+        <div class="layout vertical center">
+          <div class="value"><span class$="{{_valueClasses}}">{{_value}}</span></div>
+          <div class="subLabels">{{valueLabel}}</div>
+        </div> 
+        <div class="layout vertical center">
+          <div class="change">{{percent}}%</div>
+          <div class="subLabels">{{percentLabel}}</div>
+        </div> 
+      </div>
+      <template is="dom-if" if="{{_checkExistance(alternativeData)}}">
+        <div id="alternateSection" class="subsection layout horizontal center">
+          <div class="layout vertical center">
+            <template is="dom-repeat" items="[[alternativeData]]">
+              <div class="altValue">{{item.value}}</span></div>
+            </template>
+          </div> 
+          <div class="layout vertical center">
+            <template is="dom-repeat" items="[[alternativeData]]">
+              <div class="altChange">{{item.percent}}%</span></div>
+            </template>
+          </div> 
+        </div>
+      </template>
+      <template is="dom-if" if="{{_checkExistance(_historical)}}">
+        <google-chart id="sparkline" 
+          type="line" 
+          events='["onmouseover", "onmouseout"]'
+          options="{{_sparklineOptions}}"
+          cols="{{_sparklineColumns}}"
+          rows="{{_historical}}"
+          on-google-chart-onmouseover="_sparklineHoverOver"
+          on-google-chart-onmouseout="_sparklineHoverOut">
+        </google-chart>
+      </template>
+    </div>
+
+  </template>
+
+  <script>
+    /**
+     * `flex-metric`
+     * web component displaying analytics data 
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+     class FlexMetric extends Polymer.Element {
+      static get is() { return 'flex-metric'; }
+      static get properties() {
+        return {
+          label: String,
+          value: {
+            type: Number,
+            value: 0
+          },
+          percent: {
+            type: Number,
+            value: 0
+          },
+          alternativeData: {
+            type: Array,
+            value: []
+          },
+          historical: Array,
+          valueLabel: String,
+          percentLabel: String,
+          _value: {
+            type: Number,
+            value: 0
+          },
+          _historical : { 
+            type: Array,
+            value: []
+          },
+          _valueClasses: String,
+          _sparklineOptions: {
+            type: Object,
+            value: {
+              tooltip: {
+                trigger: 'none'},
+              legend: 'none', 
+              hAxis: {
+                baselineColor: 'none',
+                textPosition: 'none',
+                ticks: []}, 
+              vAxis: {
+                baselineColor: 'none', 
+                textPosition: 'none',
+                ticks: []},
+              dataOpacity: 0.8,
+              colors: ["#0d47a1"] }
+          },
+          _sparklineColumns: { 
+            type: Array,
+            value: [
+              {label: "Data", type: "string"},
+              {label: "Value", type: "number"},
+              {type: 'string', role: 'style'}
+            ]
+          }
+        }
+      } 
+
+      static get observers() {
+        return [
+          '_valueChanged(value)',
+          '_historicalChanged(historical)',
+          '_redrawChange(_value, _historical)',
+        ]
+      }
+  
+      _sparklineHoverOver(event) {
+        this._valueClasses = "highlight"
+        this._value = this.historical[event.detail.data.row][event.detail.data.column]
+      }
+
+      _sparklineHoverOut(event) {
+        this._valueClasses = ""
+       this._value = this.value
+      }
+
+      ready() {
+        super.ready()        
+      }
+
+      _checkExistance(value) {
+        if (value == null) return false
+        if ((value instanceof Array) && value.length == 0) return false
+        return true
+      }
+
+      _historicalChanged(historical) {
+        if (historical == null || historical.length == 0) return
+        var temp = historical.slice()
+        temp.forEach(element => {
+          element.push(null)
+        })
+        temp[temp.length-1][2] = 'point { size: 4; visible: true; }'
+        this._historical = temp
+      }
+
+      _valueChanged(value) {
+        if (value != null) this._value = value
+      }
+
+      _redrawChange(value, historical) {
+        if(value == null || historical == null) return
+        if(this.$.sparkline == null) return
+        this.$.sparkline.redraw()
+      }
+    }
+
+    window.customElements.define(FlexMetric.is, FlexMetric);
+  </script>
+</dom-module>

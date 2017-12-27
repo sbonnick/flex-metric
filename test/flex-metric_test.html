@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>flex-metric test</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <script src="../../chai-dom/chai-dom.js"></script>
+
+    <link rel="import" href="../flex-metric.html">
+  </head>
+  <body>
+
+    <test-fixture id="BasicTestFixture">
+      <template>
+        <flex-metric></flex-metric>
+      </template>
+    </test-fixture>
+
+    <test-fixture id="SprklineTestFixture">
+      <template>
+        <flex-metric
+          historical='[["",4],["",6],["",1],["",7],["",23]]'>
+        </flex-metric>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('Basic View', () => {
+        var element 
+
+        setup(function() {
+          element = fixture('BasicTestFixture')
+        })
+
+        test('default values display basic view with value and percent only', function(done) {        
+          flush(function() {
+            expect(element.shadowRoot.querySelector('div')).to.not.contain('div.label')
+            expect(element.shadowRoot.querySelector('div')).to.contain('#valueSection')
+            expect(element.shadowRoot.querySelector('div')).to.not.contain('#alternateSection')            
+            expect(element.shadowRoot.querySelector('div')).to.not.contain('#sparkline')
+            done()
+          })     
+        });
+
+        test('default values display zeroed-out value and percent', function(done) {        
+          flush(function() {
+            expect(element.shadowRoot.querySelector('div div div.value span')).to.have.html('0')
+            expect(element.shadowRoot.querySelector('div div div.change')).to.have.html('0%')
+            done()
+          })     
+        });
+
+        test('label when supplied will include a label on the basic view', function(done) {        
+          element.label = "testLabel"
+
+          flush(function() {
+            expect(element.shadowRoot.querySelector('div')).to.contain('div.label')
+            expect(element.shadowRoot.querySelector('div div.label')).to.have.html('testLabel')
+            done()
+          })     
+        });
+
+        test('sub labels when supplied are applied on the basic view', function(done) {        
+          element.valueLabel = "valueLabel"
+          element.percentLabel = "percentLabel"
+
+          flush(function() {
+            expect(element.shadowRoot.querySelector('div div div.value').nextElementSibling).to.have.html('valueLabel')
+            expect(element.shadowRoot.querySelector('div div div.change').nextElementSibling).to.have.html('percentLabel')
+            done()
+          })     
+        });
+
+      });
+    </script>
+
+  </body>
+</html>
