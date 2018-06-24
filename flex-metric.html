@@ -71,31 +71,17 @@
           <div class="subLabels">{{valueLabel}}</div>
         </div> 
         <div class="layout vertical center">
-          <div class="change">{{percent}}%</div>
+          <div class="change">{{_percent}}%</div>
           <div class="subLabels">{{percentLabel}}</div>
         </div> 
-      </div>
-      <template is="dom-if" if="{{_checkExistance(alternativeData)}}">
-        <div id="alternateSection" class="subsection layout horizontal center">
-          <div class="layout vertical center">
-            <template is="dom-repeat" items="[[alternativeData]]">
-              <div class="altValue">{{item.value}}</span></div>
-            </template>
-          </div> 
-          <div class="layout vertical center">
-            <template is="dom-repeat" items="[[alternativeData]]">
-              <div class="altChange">{{item.percent}}%</span></div>
-            </template>
-          </div> 
-        </div>
-      </template>
-      <template is="dom-if" if="{{_checkExistance(_historical)}}">
+      </div> 
+      <template is="dom-if" if="{{_checkExistance(_historical.value)}}">
         <google-chart id="sparkline" 
           type="line" 
           events='["onmouseover", "onmouseout"]'
           options="{{_sparklineOptions}}"
           cols="{{_sparklineColumns}}"
-          rows="{{_historical}}"
+          rows="{{_historical.value}}"
           on-google-chart-onmouseover="_sparklineHoverOver"
           on-google-chart-onmouseout="_sparklineHoverOut">
         </google-chart>
@@ -126,21 +112,24 @@
             type: Number,
             value: 0
           },
-          alternativeData: {
-            type: Array,
-            value: []
-          },
-          historical: Array,
+          data: Array, 
           valueLabel: String,
           percentLabel: String,
+          valueKey: String,
+          totalKey: String,
+
           _value: {
             type: Number,
             value: 0
           },
-          _historical : { 
-            type: Array,
-            value: []
+          _percent: {
+            type: Number,
+            value: 0
           },
+          _historical : { 
+            type: Object,
+            value: {}
+          },     
           _valueClasses: String,
           _sparklineOptions: {
             type: Object,
@@ -173,19 +162,22 @@
       static get observers() {
         return [
           '_valueChanged(value)',
-          '_historicalChanged(historical)',
+          '_percentChanged(percent)',
+          '_historicalChanged(data, valueKey, totalKey)',
           '_redrawChange(_value, _historical)',
         ]
       }
   
       _sparklineHoverOver(event) {
         this._valueClasses = "highlight"
-        this._value = this.historical[event.detail.data.row][event.detail.data.column]
+        this._value = this._historical.value[event.detail.data.row][event.detail.data.column]
+        this._percent = this._historical.percent[event.detail.data.row][event.detail.data.column]
       }
 
       _sparklineHoverOut(event) {
         this._valueClasses = ""
        this._value = this.value
+       this._percent = this.percent
       }
 
       ready() {
@@ -198,22 +190,51 @@
         return true
       }
 
-      _historicalChanged(historical) {
-        if (historical == null || historical.length == 0) return
-        var temp = historical.slice()
-        temp.forEach(element => {
-          element.push(null)
+      _historicalChanged(data, valueKey, totalKey) {
+        if ( data        == null 
+          || data.length == 0 
+          || valueKey    == null 
+          || totalKey    == null) 
+            return
+
+        // todo: use count and total as defalt keys, check key existance
+        // todo: check for single value in data, dont show
+
+        let tempHistorical = {
+          value: [],
+          percent: []
+        }
+        
+        let count = 0,
+            total = 0
+
+        data.forEach(pt => {
+          count += pt[valueKey]
+          total += pt[totalKey]
+
+          tempHistorical.value.push(["", pt[valueKey], null])
+          tempHistorical.percent.push(["", Math.round((pt[valueKey]/pt[totalKey]) * 100), null])
         })
-        temp[temp.length-1][2] = 'point { size: 4; visible: true; }'
-        this._historical = temp
+
+        tempHistorical.value[tempHistorical.value.length-1][2]     = 'point { size: 4; visible: true; }'
+        tempHistorical.percent[tempHistorical.percent.length-1][2] = 'point { size: 4; visible: true; }'
+
+        this._historical =  tempHistorical
+
+        this.value = count
+        this.percent = Math.round((count/total) * 100)
       }
 
       _valueChanged(value) {
         if (value != null) this._value = value
       }
 
-      _redrawChange(value, historical) {
-        if(value == null || historical == null) return
+      _percentChanged(percent) {
+        if (percent != null) this._percent = percent
+      }
+
+      _redrawChange(_value, _historical) {
+        if(_value == null || _historical == null) return
         if(this.$.sparkline == null) return
         this.$.sparkline.redraw()
       }

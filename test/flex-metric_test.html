@@ -23,7 +23,7 @@
     <test-fixture id="SprklineTestFixture">
       <template>
         <flex-metric
-          historical='[["",4],["",6],["",1],["",7],["",23]]'>
+          data='[{"count": 4, "total": 40}, {"count": 6, "total": 16}, {"count": 1, "total": 4}, {"count": 7, "total": 27}, {"count": 23, "total": 24} ]'>
         </flex-metric>
       </template>
     </test-fixture>
@@ -39,8 +39,7 @@
         test('default values display basic view with value and percent only', function(done) {        
           flush(function() {
             expect(element.shadowRoot.querySelector('div')).to.not.contain('div.label')
-            expect(element.shadowRoot.querySelector('div')).to.contain('#valueSection')
-            expect(element.shadowRoot.querySelector('div')).to.not.contain('#alternateSection')            
+            expect(element.shadowRoot.querySelector('div')).to.contain('#valueSection')         
             expect(element.shadowRoot.querySelector('div')).to.not.contain('#sparkline')
             done()
           })     
